@@ -85,14 +85,17 @@ class FluidAnimationsModule : XposedModule() {
                     val transit = chain.getArg(1) as? Int ?: return@intercept original
                     val enter = chain.getArg(2) as? Boolean ?: return@intercept original
                     val current = settings
-                    if (!current.enabled || !isAppTransition(transit)) {
-                        return@intercept original
+                    val replacement = if (current.enabled && isAppTransition(transit) &&
+                        isFluidTarget(chain.thisObject)
+                    ) {
+                        FluidAnimation(current.profile, enter, current.speed)
+                    } else {
+                        original
                     }
-                    if (!isFluidTarget(chain.thisObject)) return@intercept original
-                    return@intercept FluidAnimation(current.profile, enter, current.speed)
+                    return@intercept replacement
                 } catch (throwable: Throwable) {
                     log(Log.WARN, TAG, "Fluid animation replacement failed", throwable)
-                    return@intercept null
+                    return@intercept original
                 }
             }
     }
@@ -224,7 +227,7 @@ class FluidAnimationsModule : XposedModule() {
                     return@intercept nextType in 1..9
                 } catch (throwable: Throwable) {
                     log(Log.WARN, TAG, "Zero latency hook failed", throwable)
-                    return@intercept chain.proceed()
+                    return@intercept true
                 }
             }
     }
