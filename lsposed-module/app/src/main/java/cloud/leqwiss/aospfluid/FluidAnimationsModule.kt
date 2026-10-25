@@ -141,7 +141,7 @@ class FluidAnimationsModule : XposedModule() {
                 change.javaClass.getMethod("getLeash").invoke(change)
             }.getOrNull() as? SurfaceControl ?: continue
             if (!leash.isValid) continue
-            transaction.setMatrix(leash, 0.10f, 0f, 0f, 0.10f)
+            setSurfaceMatrix(transaction, leash, 0.10f)
             transaction.setAlpha(leash, 0f)
         }
         transaction.apply()
@@ -175,6 +175,26 @@ class FluidAnimationsModule : XposedModule() {
             }.getOrNull()
         }
         return runCatching { method?.invoke(target) as? Int }.getOrNull() ?: Int.MIN_VALUE
+    }
+
+    private fun setSurfaceMatrix(
+        transaction: SurfaceControl.Transaction,
+        leash: SurfaceControl,
+        scale: Float
+    ) {
+        val method = methods.getOrPut(transaction.javaClass.name + ":setMatrix") {
+            runCatching {
+                transaction.javaClass.getMethod(
+                    "setMatrix",
+                    SurfaceControl::class.java,
+                    Float::class.javaPrimitiveType,
+                    Float::class.javaPrimitiveType,
+                    Float::class.javaPrimitiveType,
+                    Float::class.javaPrimitiveType
+                )
+            }.getOrNull()
+        }
+        method?.invoke(transaction, leash, scale, 0f, 0f, scale)
     }
 
     private fun readField(target: Any?, name: String): Any? {
