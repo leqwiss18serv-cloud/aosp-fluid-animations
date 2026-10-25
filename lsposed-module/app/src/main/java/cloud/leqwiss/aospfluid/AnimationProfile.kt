@@ -19,8 +19,8 @@ enum class AnimationProfile(
         closeDuration = 300L,
         openScale = 0.85f,
         closeScale = 0.91f,
-        openTravel = 0.012f,
-        closeTravel = 0.008f
+        openTravel = 0.008f,
+        closeTravel = 0.006f
     ),
     COLOROS(
         key = "coloros",
@@ -29,8 +29,8 @@ enum class AnimationProfile(
         closeDuration = 340L,
         openScale = 0.88f,
         closeScale = 0.94f,
-        openTravel = 0.004f,
-        closeTravel = 0.004f
+        openTravel = 0.003f,
+        closeTravel = 0.003f
     ),
     ORIGINOS(
         key = "originos",
@@ -39,8 +39,8 @@ enum class AnimationProfile(
         closeDuration = 380L,
         openScale = 0.82f,
         closeScale = 0.88f,
-        openTravel = 0.018f,
-        closeTravel = 0.014f
+        openTravel = 0.012f,
+        closeTravel = 0.010f
     );
 
     companion object {
@@ -54,28 +54,19 @@ data class AnimationSettings(
     val enabled: Boolean,
     val profile: AnimationProfile,
     val speed: Float,
-    val colorBlur: Boolean,
-    val blurRadius: Int,
-    val cancelFix: Boolean,
-    val zeroLatency: Boolean
+    val cancelFix: Boolean
 ) {
     companion object {
         const val KEY_ENABLED = "enabled"
         const val KEY_PROFILE = "profile"
         const val KEY_SPEED = "speed"
-        const val KEY_COLOR_BLUR = "coloros_blur"
-        const val KEY_BLUR_RADIUS = "blur_radius"
         const val KEY_CANCEL_FIX = "cancel_fix"
-        const val KEY_ZERO_LATENCY = "zero_latency"
 
         val DEFAULT = AnimationSettings(
             enabled = true,
             profile = AnimationProfile.ORIGINOS,
             speed = 1.5f,
-            colorBlur = true,
-            blurRadius = 18,
-            cancelFix = true,
-            zeroLatency = true
+            cancelFix = true
         )
 
         fun read(preferences: SharedPreferences): AnimationSettings {
@@ -86,10 +77,7 @@ data class AnimationSettings(
                 ),
                 speed = (preferences.readInt(KEY_SPEED, 150, 50, 250) / 100f)
                     .coerceIn(0.5f, 2.5f),
-                colorBlur = preferences.readBoolean(KEY_COLOR_BLUR, true),
-                blurRadius = preferences.readInt(KEY_BLUR_RADIUS, 18, 0, 36),
-                cancelFix = preferences.readBoolean(KEY_CANCEL_FIX, true),
-                zeroLatency = preferences.readBoolean(KEY_ZERO_LATENCY, true)
+                cancelFix = preferences.readBoolean(KEY_CANCEL_FIX, true)
             )
         }
     }
