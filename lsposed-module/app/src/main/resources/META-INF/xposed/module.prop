@@ -1,7 +1,7 @@
-id=cloud_leqwiss_dockcontrol
-name=Evolution Dock Control
+id=aosp_fluid_animations
+name=AOSP Fluid Animations
 author=leqwiss18serv-cloud
-description=Adaptive floating dock with themes, precise layout and icon offsets.
+description=HyperOS 4, ColorOS and OriginOS 7 physics for Android 16 app transitions.
 minApiVersion=102
 targetApiVersion=102
 staticScope=true
