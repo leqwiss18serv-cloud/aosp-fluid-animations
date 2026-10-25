@@ -80,8 +80,9 @@ class FluidAnimationsModule : XposedModule() {
             .setPriority(XposedInterface.PRIORITY_HIGHEST)
             .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
             .intercept { chain ->
+                var original: Animation? = null
                 try {
-                    val original = chain.proceed() as? Animation ?: return@intercept null
+                    original = chain.proceed() as? Animation ?: return@intercept null
                     val transit = chain.getArg(1) as? Int ?: return@intercept original
                     val enter = chain.getArg(2) as? Boolean ?: return@intercept original
                     val current = settings
