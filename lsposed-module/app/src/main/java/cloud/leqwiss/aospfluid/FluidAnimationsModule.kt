@@ -157,7 +157,11 @@ class FluidAnimationsModule : XposedModule() {
                 }.getOrNull()
                 try {
                     if (animation != null && settings.cancelFix) {
-                        collapseImmediately(chain.thisObject, animation)
+                        collapseImmediately(
+                            chain.getArg(0) as? SurfaceControl.Transaction,
+                            chain.thisObject,
+                            animation
+                        )
                     }
                     val result = chain.proceed()
                     if (animation != null && animation.enter && settings.cancelFix) {
@@ -171,12 +175,16 @@ class FluidAnimationsModule : XposedModule() {
             }
     }
 
-    private fun collapseImmediately(animator: Any, animation: FluidAnimation) {
-        val transaction = readField(animator, "mAnimatable")?.let { animatable ->
+    private fun collapseImmediately(
+        hookTransaction: SurfaceControl.Transaction?,
+        animator: Any,
+        animation: FluidAnimation
+    ) {
+        val transaction = hookTransaction ?: (readField(animator, "mAnimatable")?.let { animatable ->
             runCatching {
                 animatable.javaClass.getMethod("getSyncTransaction").invoke(animatable)
             }.getOrNull()
-        } as? SurfaceControl.Transaction ?: return
+        } as? SurfaceControl.Transaction) ?: return
         val leash = readField(animator, "mLeash") as? SurfaceControl ?: return
         if (!leash.isValid) return
         transaction.setScale(leash, 0.10f, 0.10f)
