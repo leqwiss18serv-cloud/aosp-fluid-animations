@@ -1,5 +1,8 @@
 package cloud.leqwiss.aospfluid
 
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
+import android.animation.ValueAnimator
 import android.content.SharedPreferences
 import android.os.Looper
 import android.util.Log
@@ -35,10 +38,15 @@ class FluidAnimationsModule : XposedModule() {
         }
 
         val loader = param.defaultClassLoader
+        runCatching { hookRemoteHandlers(loader) }
+            .onFailure { log(Log.WARN, TAG, "Remote transition bypass hook failed", it) }
         runCatching { hookShellLoadAnimation(loader) }
             .onFailure { log(Log.WARN, TAG, "Shell loadAnimation hook failed", it) }
+        runCatching { hookSurfaceAnimatorCancel(loader) }
+            .onFailure { log(Log.WARN, TAG, "Surface cancel hook failed", it) }
         runCatching { hookShellAbort(loader) }
             .onFailure { log(Log.WARN, TAG, "Shell abort hook failed", it) }
+
         log(
             Log.INFO,
             TAG,
@@ -68,6 +76,33 @@ class FluidAnimationsModule : XposedModule() {
         }
     }
 
+    private fun hookRemoteHandlers(loader: ClassLoader?) {
+        for (className in REMOTE_HANDLERS) {
+            val handlerClass = findClass(className, loader) ?: continue
+            val method = handlerClass.declaredMethods.firstOrNull {
+                it.name == "startAnimation" && it.parameterCount == 5
+            } ?: continue
+
+            hook(method)
+                .setPriority(XposedInterface.PRIORITY_HIGHEST)
+                .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
+                .intercept { chain ->
+                    try {
+                        val info = chain.getArg(1)
+                        val type = readInt(info, "getType")
+                        if (settings.enabled && type in APP_TRANSITIONS) {
+                            removeRequestedRemote(chain.thisObject, chain.getArg(0))
+                            return@intercept false
+                        }
+                        return@intercept chain.proceed() == true
+                    } catch (throwable: Throwable) {
+                        log(Log.WARN, TAG, "Remote transition bypass failed", throwable)
+                        return@intercept chain.proceed() == true
+                    }
+                }
+        }
+    }
+
     private fun hookShellLoadAnimation(loader: ClassLoader?) {
         val handlerClass = findClass(DEFAULT_TRANSITION_HANDLER, loader) ?: return
         val method = handlerClass.getDeclaredMethod(
@@ -89,7 +124,7 @@ class FluidAnimationsModule : XposedModule() {
                     val change = chain.getArg(2)
                     val type = chain.getArg(0) as? Int ?: return@intercept original
                     val current = settings
-                    if (!current.enabled || !isAppTransition(type) || !isFluidChange(change)) {
+                    if (!current.enabled || type !in APP_TRANSITIONS || !isFluidChange(change)) {
                         return@intercept original
                     }
                     val enter = isOpeningMode(readInt(change, "getMode"))
@@ -98,6 +133,45 @@ class FluidAnimationsModule : XposedModule() {
                     log(Log.WARN, TAG, "Fluid animation replacement failed", throwable)
                     return@intercept original
                 }
+            }
+    }
+
+    private fun hookSurfaceAnimatorCancel(loader: ClassLoader?) {
+        val animatorClass = findClass(DEFAULT_SURFACE_ANIMATOR, loader) ?: return
+        val method = animatorClass.declaredMethods.firstOrNull {
+            it.name == "buildSurfaceAnimation" && it.parameterCount >= 6 &&
+                Animation::class.java.isAssignableFrom(it.parameterTypes[1]) &&
+                SurfaceControl::class.java.isAssignableFrom(it.parameterTypes[2])
+        } ?: return
+
+        hook(method)
+            .setPriority(XposedInterface.PRIORITY_HIGHEST)
+            .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
+            .intercept { chain ->
+                val animations = chain.getArg(0) as? MutableList<Animator>
+                val leash = chain.getArg(2) as? SurfaceControl
+                val beforeCount = animations?.size ?: 0
+                val result = chain.proceed()
+                try {
+                    if (settings.enabled && settings.cancelFix && animations != null && leash != null) {
+                        for (index in beforeCount until animations.size) {
+                            animations.getOrNull(index)?.let { animator ->
+                                animator.addListener(object : AnimatorListenerAdapter() {
+                                    private var handled = false
+
+                                    override fun onAnimationCancel(animation: Animator) {
+                                        if (handled) return
+                                        handled = true
+                                        collapseSurface(leash)
+                                    }
+                                })
+                            }
+                        }
+                    }
+                } catch (throwable: Throwable) {
+                    log(Log.WARN, TAG, "Cancel guard registration failed", throwable)
+                }
+                result
             }
     }
 
@@ -123,6 +197,12 @@ class FluidAnimationsModule : XposedModule() {
             }
     }
 
+    private fun removeRequestedRemote(handler: Any?, transition: Any?) {
+        if (handler == null || transition == null) return
+        val requested = readField(handler, "mRequestedRemotes") as? MutableMap<*, *> ?: return
+        runCatching { requested.remove(transition) }
+    }
+
     private fun collapseOpeningSurfaces(active: Any?) {
         if (active == null || Looper.getMainLooper().thread != Thread.currentThread()) return
         val info = readField(active, "mInfo") ?: return
@@ -140,41 +220,21 @@ class FluidAnimationsModule : XposedModule() {
             val leash = runCatching {
                 change.javaClass.getMethod("getLeash").invoke(change)
             }.getOrNull() as? SurfaceControl ?: continue
-            if (!leash.isValid) continue
-            setSurfaceMatrix(transaction, leash, 0.10f)
-            transaction.setAlpha(leash, 0f)
+            if (leash.isValid) collapseSurface(transaction, leash)
         }
         transaction.apply()
     }
 
-    private fun isAppTransition(type: Int): Boolean {
-        return type in 1..4 || type == 10 || type == 11
+    private fun collapseSurface(leash: SurfaceControl) {
+        if (!leash.isValid) return
+        collapseSurface(SurfaceControl.Transaction(), leash)
     }
 
-    private fun isOpeningMode(mode: Int): Boolean {
-        return mode == 1 || mode == 3
-    }
-
-    private fun isFluidChange(change: Any?): Boolean {
-        if (change == null) return false
-        val mode = readInt(change, "getMode")
-        if (mode != 1 && mode != 2 && mode != 3 && mode != 4) return false
-        val taskInfo = runCatching {
-            change.javaClass.getMethod("getTaskInfo").invoke(change)
-        }.getOrNull()
-        if (taskInfo == null) return true
-        val activityType = readInt(taskInfo, "getActivityType")
-        return activityType != 2
-    }
-
-    private fun readInt(target: Any?, methodName: String): Int {
-        if (target == null) return Int.MIN_VALUE
-        val method = methods.getOrPut(target.javaClass.name + ":" + methodName) {
-            runCatching {
-                target.javaClass.getMethod(methodName)
-            }.getOrNull()
-        }
-        return runCatching { method?.invoke(target) as? Int }.getOrNull() ?: Int.MIN_VALUE
+    private fun collapseSurface(transaction: SurfaceControl.Transaction, leash: SurfaceControl) {
+        if (!leash.isValid) return
+        setSurfaceMatrix(transaction, leash, 0.10f)
+        transaction.setAlpha(leash, 0f)
+        transaction.apply()
     }
 
     private fun setSurfaceMatrix(
@@ -195,6 +255,32 @@ class FluidAnimationsModule : XposedModule() {
             }.getOrNull()
         }
         method?.invoke(transaction, leash, scale, 0f, 0f, scale)
+    }
+
+    private fun isOpeningMode(mode: Int): Boolean {
+        return mode == 1 || mode == 3
+    }
+
+    private fun isFluidChange(change: Any?): Boolean {
+        if (change == null) return false
+        val mode = readInt(change, "getMode")
+        if (mode !in APP_TRANSITIONS) return false
+        val taskInfo = runCatching {
+            change.javaClass.getMethod("getTaskInfo").invoke(change)
+        }.getOrNull()
+        if (taskInfo == null) return true
+        val activityType = readInt(taskInfo, "getActivityType")
+        return activityType != 2
+    }
+
+    private fun readInt(target: Any?, methodName: String): Int {
+        if (target == null) return Int.MIN_VALUE
+        val method = methods.getOrPut(target.javaClass.name + ":" + methodName) {
+            runCatching {
+                target.javaClass.getMethod(methodName)
+            }.getOrNull()
+        }
+        return runCatching { method?.invoke(target) as? Int }.getOrNull() ?: Int.MIN_VALUE
     }
 
     private fun readField(target: Any?, name: String): Any? {
@@ -220,11 +306,18 @@ class FluidAnimationsModule : XposedModule() {
         private const val PREFERENCES_GROUP = "fluid_animations"
         private const val DEFAULT_TRANSITION_HANDLER =
             "com.android.wm.shell.transition.DefaultTransitionHandler"
+        private const val DEFAULT_SURFACE_ANIMATOR =
+            "com.android.wm.shell.transition.DefaultSurfaceAnimator"
         private const val SHELL_TRANSITIONS = "com.android.wm.shell.transition.Transitions"
         private const val ACTIVE_TRANSITION =
             "com.android.wm.shell.transition.Transitions\$ActiveTransition"
         private const val TRANSITION_INFO = "android.window.TransitionInfo"
         private const val TRANSITION_INFO_CHANGE = "android.window.TransitionInfo\$Change"
+        private val REMOTE_HANDLERS = setOf(
+            "com.android.wm.shell.transition.RemoteTransitionHandler",
+            "com.android.wm.shell.transition.OneShotRemoteHandler"
+        )
+        private val APP_TRANSITIONS = setOf(1, 2, 3, 4)
         private val HOOK_PACKAGES = setOf(
             "android",
             "com.android.systemui",

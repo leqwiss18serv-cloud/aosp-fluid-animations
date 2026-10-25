@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 enum class AnimationProfile(
     val key: String,
     val title: String,
+    val description: String,
     val openDuration: Long,
     val closeDuration: Long,
     val openScale: Float,
@@ -15,32 +16,35 @@ enum class AnimationProfile(
     HYPEROS(
         key = "hyperos",
         title = "HyperOS 4",
-        openDuration = 430L,
-        closeDuration = 300L,
-        openScale = 0.85f,
-        closeScale = 0.91f,
-        openTravel = 0.008f,
-        closeTravel = 0.006f
+        description = "Резкий старт и тяжёлое торможение",
+        openDuration = 470L,
+        closeDuration = 330L,
+        openScale = 0.78f,
+        closeScale = 0.86f,
+        openTravel = 0.018f,
+        closeTravel = 0.014f
     ),
     COLOROS(
         key = "coloros",
         title = "ColorOS",
-        openDuration = 470L,
-        closeDuration = 340L,
-        openScale = 0.88f,
-        closeScale = 0.94f,
-        openTravel = 0.003f,
-        closeTravel = 0.003f
+        description = "Мягкая пружина Fluid Cloud",
+        openDuration = 520L,
+        closeDuration = 370L,
+        openScale = 0.82f,
+        closeScale = 0.90f,
+        openTravel = 0.010f,
+        closeTravel = 0.008f
     ),
     ORIGINOS(
         key = "originos",
         title = "OriginOS 7",
-        openDuration = 540L,
-        closeDuration = 380L,
-        openScale = 0.82f,
-        closeScale = 0.88f,
-        openTravel = 0.012f,
-        closeTravel = 0.010f
+        description = "Живая пружина с отскоком и глубиной",
+        openDuration = 580L,
+        closeDuration = 420L,
+        openScale = 0.70f,
+        closeScale = 0.80f,
+        openTravel = 0.028f,
+        closeTravel = 0.022f
     );
 
     companion object {
@@ -67,6 +71,13 @@ data class AnimationSettings(
             profile = AnimationProfile.ORIGINOS,
             speed = 1.5f,
             cancelFix = true
+        )
+
+        val STOCK = AnimationSettings(
+            enabled = false,
+            profile = AnimationProfile.ORIGINOS,
+            speed = 1.0f,
+            cancelFix = false
         )
 
         fun read(preferences: SharedPreferences): AnimationSettings {

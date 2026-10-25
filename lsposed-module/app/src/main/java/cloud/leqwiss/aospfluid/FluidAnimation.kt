@@ -38,14 +38,14 @@ class FluidAnimation(
         matrix.setScale(scale, scale, pivotX, pivotY)
         if (profile == AnimationProfile.ORIGINOS) {
             val depth = 1f - progress
-            matrix.postSkew(-0.010f * depth, 0.007f * depth, pivotX, pivotY)
+            matrix.postSkew(-0.014f * depth, 0.009f * depth, pivotX, pivotY)
         }
         matrix.postTranslate(0f, travelPixels)
 
         transformation.alpha = if (enter) {
-            0.55f + 0.45f * progress
+            0.28f + 0.72f * progress
         } else {
-            1f - 0.65f * progress
+            1f - 0.80f * progress
         }
     }
 

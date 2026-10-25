@@ -1,23 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">AOSP Fluid Animations</string>
-    <string name="module_description">HyperOS 4, ColorOS и OriginOS 7 физика Shell Transitions для Android 16.</string>
+    <string name="module_description">OriginOS 7, HyperOS 4 и ColorOS физика Shell Transitions для Android 16.</string>
     <string name="settings_title">Физика анимаций</string>
-    <string name="status_ready">Настройки применяются в Shell автоматически.</string>
-    <string name="status_saved">Сохранено и применено</string>
-    <string name="status_reset">Сброшено к OriginOS 7</string>
-    <string name="status_local_only">LSPosed Service ещё не подключён. Настройки сохранены локально.</string>
-    <string name="status_service_missing">LSPosed Service не подключён. Установите APK, включите модуль и выберите область ниже.</string>
-    <string name="status_read_failed">Не удалось прочитать настройки.</string>
-    <string name="status_save_failed">Не удалось сохранить настройки.</string>
-    <string name="profile_title">Профиль анимаций</string>
-    <string name="profile_hyperos">HyperOS 4 — Dynamic Engine</string>
-    <string name="profile_coloros">ColorOS — Fluid Cloud</string>
-    <string name="profile_originos">OriginOS 7 — Quantum Physics</string>
-    <string name="originos_note">Рекомендуется OriginOS 7: самая близкая физика и лучший отклик на Snapdragon 730.</string>
+    <string name="status_ready">Подключено к LSPosed. Настройки применяются в Shell.</string>
+    <string name="status_applied">Успешно применено</string>
+    <string name="status_stock">Возвращены стандартные анимации Evolution X</string>
+    <string name="status_local_only">LSPosed Service не подключён. Настройка сохранена только локально.</string>
+    <string name="status_service_missing">LSPosed Service не подключён. Включите модуль и выберите область действия.</string>
+    <string name="status_read_failed">Ошибка чтения настроек</string>
+    <string name="status_save_failed">Ошибка применения настроек</string>
+    <string name="module_enable">Включить кастомные анимации</string>
+    <string name="profile_title">Профиль</string>
+    <string name="profile_hyperos">HyperOS 4</string>
+    <string name="profile_coloros">ColorOS</string>
+    <string name="profile_originos">OriginOS 7</string>
+    <string name="profile_hyperos_hint">Резкий старт и тяжёлое торможение</string>
+    <string name="profile_coloros_hint">Мягкая пружина Fluid Cloud</string>
+    <string name="profile_originos_hint">Живая пружина с отскоком и глубиной</string>
+    <string name="originos_note">Рекомендуется OriginOS 7 — максимальная похожесть на оригинал.</string>
     <string name="speed_title">Общая скорость</string>
     <string name="speed_value">Скорость: %1$.2fx</string>
     <string name="cancel_fix">Фикс прыжка при отмене</string>
     <string name="cancel_hint">Прерывание запуска мгновенно скрывает окно без разворота на весь экран.</string>
-    <string name="reset_settings">Сбросить к OriginOS 7</string>
+    <string name="apply_settings">Применить</string>
+    <string name="reset_stock">Сбросить к стандартным Evolution X</string>
+    <string name="scope_hint">Область в LSPosed: Android System, System UI, Pixel Launcher.</string>
 </resources>

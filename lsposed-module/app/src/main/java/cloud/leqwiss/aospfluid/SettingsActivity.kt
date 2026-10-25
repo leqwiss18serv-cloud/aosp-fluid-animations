@@ -6,6 +6,7 @@ import android.widget.RadioButton
 import android.widget.RadioGroup
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.slider.Slider
@@ -16,9 +17,13 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var profileHyper: RadioButton
     private lateinit var profileColor: RadioButton
     private lateinit var profileOrigin: RadioButton
+    private lateinit var profileDescription: TextView
+    private lateinit var enabledSwitch: MaterialSwitch
     private lateinit var speedSlider: Slider
     private lateinit var speedValue: TextView
     private lateinit var cancelFixSwitch: MaterialSwitch
+    private lateinit var applyButton: MaterialButton
+    private lateinit var resetButton: MaterialButton
 
     private var updatingUi = false
 
@@ -37,23 +42,30 @@ class SettingsActivity : AppCompatActivity() {
         profileHyper = findViewById(R.id.profileHyper)
         profileColor = findViewById(R.id.profileColor)
         profileOrigin = findViewById(R.id.profileOrigin)
+        profileDescription = findViewById(R.id.profileDescription)
+        enabledSwitch = findViewById(R.id.enabledSwitch)
         speedSlider = findViewById(R.id.speedSlider)
         speedValue = findViewById(R.id.speedValue)
         cancelFixSwitch = findViewById(R.id.cancelFixSwitch)
-        findViewById<MaterialButton>(R.id.resetButton).setOnClickListener { resetSettings() }
+        applyButton = findViewById(R.id.applyButton)
+        resetButton = findViewById(R.id.resetButton)
+        applyButton.setOnClickListener { applySettings() }
+        resetButton.setOnClickListener { resetStock() }
     }
 
     private fun installListeners() {
-        profileGroup.setOnCheckedChangeListener { _, _ -> saveSettings() }
-        speedSlider.addOnChangeListener { _, _, _ -> saveSettings() }
-        cancelFixSwitch.setOnCheckedChangeListener { _, _ -> saveSettings() }
+        profileGroup.setOnCheckedChangeListener { _, _ -> updateDescription() }
+        speedSlider.addOnChangeListener { _, value, _ ->
+            speedValue.text = getString(R.string.speed_value, value)
+        }
     }
 
     private fun loadSettings() {
-        val preferences = preferences() ?: return setServiceMissing()
+        val preferences = preferences() ?: return
         runCatching {
             updatingUi = true
             val settings = AnimationSettings.read(preferences)
+            enabledSwitch.isChecked = settings.enabled
             when (settings.profile) {
                 AnimationProfile.HYPEROS -> profileHyper.isChecked = true
                 AnimationProfile.COLOROS -> profileColor.isChecked = true
@@ -61,63 +73,66 @@ class SettingsActivity : AppCompatActivity() {
             }
             speedSlider.value = settings.speed
             cancelFixSwitch.isChecked = settings.cancelFix
-            updateLabels()
-            statusView.text = if (ServiceHolder.service == null) {
-                getString(R.string.status_local_only)
-            } else {
-                getString(R.string.status_ready)
-            }
+            updateDescription()
+            updateStatus()
             updatingUi = false
         }.onFailure {
             updatingUi = false
-            statusView.text = getString(R.string.status_read_failed)
+            showError(getString(R.string.status_read_failed))
         }
     }
 
-    private fun saveSettings() {
-        if (updatingUi) return
-        val preferences = preferences() ?: return setServiceMissing()
-        runCatching {
-            preferences.edit()
-                .putBoolean(AnimationSettings.KEY_ENABLED, true)
-                .putString(AnimationSettings.KEY_PROFILE, selectedProfile().key)
-                .putInt(AnimationSettings.KEY_SPEED, (speedSlider.value * 100f).toInt())
-                .putBoolean(AnimationSettings.KEY_CANCEL_FIX, cancelFixSwitch.isChecked)
-                .apply()
-            updateLabels()
-            statusView.text = if (ServiceHolder.service == null) {
-                getString(R.string.status_local_only)
-            } else {
-                getString(R.string.status_saved)
-            }
-        }.onFailure {
-            statusView.text = getString(R.string.status_save_failed)
+    private fun applySettings() {
+        val settings = AnimationSettings(
+            enabled = enabledSwitch.isChecked,
+            profile = selectedProfile(),
+            speed = speedSlider.value,
+            cancelFix = cancelFixSwitch.isChecked
+        )
+        if (writeSettings(settings)) {
+            showSuccess(getString(R.string.status_applied))
+        } else {
+            showError(getString(R.string.status_save_failed))
         }
     }
 
-    private fun resetSettings() {
-        val preferences = preferences() ?: return setServiceMissing()
-        runCatching {
-            preferences.edit()
-                .putBoolean(AnimationSettings.KEY_ENABLED, true)
-                .putString(AnimationSettings.KEY_PROFILE, AnimationProfile.ORIGINOS.key)
-                .putInt(AnimationSettings.KEY_SPEED, 150)
-                .putBoolean(AnimationSettings.KEY_CANCEL_FIX, true)
-                .apply()
+    private fun resetStock() {
+        if (writeSettings(AnimationSettings.STOCK)) {
             loadSettings()
-            statusView.text = getString(R.string.status_reset)
-        }.onFailure {
-            statusView.text = getString(R.string.status_save_failed)
+            showSuccess(getString(R.string.status_stock))
+        } else {
+            showError(getString(R.string.status_save_failed))
         }
+    }
+
+    private fun writeSettings(settings: AnimationSettings): Boolean {
+        return runCatching {
+            var wroteRemote = false
+            ServiceHolder.service?.getRemotePreferences(PREFERENCES_GROUP)?.edit()?.apply {
+                putBoolean(AnimationSettings.KEY_ENABLED, settings.enabled)
+                putString(AnimationSettings.KEY_PROFILE, settings.profile.key)
+                putInt(AnimationSettings.KEY_SPEED, (settings.speed * 100f).toInt())
+                putBoolean(AnimationSettings.KEY_CANCEL_FIX, settings.cancelFix)
+            }?.apply()
+            wroteRemote = ServiceHolder.service != null
+
+            localPreferences().edit().apply {
+                putBoolean(AnimationSettings.KEY_ENABLED, settings.enabled)
+                putString(AnimationSettings.KEY_PROFILE, settings.profile.key)
+                putInt(AnimationSettings.KEY_SPEED, (settings.speed * 100f).toInt())
+                putBoolean(AnimationSettings.KEY_CANCEL_FIX, settings.cancelFix)
+            }.apply()
+            wroteRemote
+        }.getOrDefault(false)
     }
 
     private fun preferences(): SharedPreferences? {
         return ServiceHolder.service?.getRemotePreferences(PREFERENCES_GROUP)
-            ?: getSharedPreferences(LOCAL_PREFERENCES, MODE_PRIVATE)
+            ?: localPreferences()
     }
 
-    private fun setServiceMissing() {
-        statusView.text = getString(R.string.status_service_missing)
+    private fun localPreferences(): SharedPreferences {
+        return getSharedPreferences(LOCAL_PREFERENCES, MODE_PRIVATE)
     }
 
     private fun selectedProfile(): AnimationProfile {
@@ -128,8 +143,31 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 
-    private fun updateLabels() {
-        speedValue.text = getString(R.string.speed_value, speedSlider.value)
+    private fun updateDescription() {
+        profileDescription.text = selectedProfile().description
+    }
+
+    private fun updateStatus() {
+        if (ServiceHolder.service == null) {
+            showWarning(getString(R.string.status_local_only))
+        } else {
+            showSuccess(getString(R.string.status_ready))
+        }
+    }
+
+    private fun showSuccess(message: String) {
+        statusView.text = message
+        statusView.setTextColor(ContextCompat.getColor(this, R.color.status_success))
+    }
+
+    private fun showWarning(message: String) {
+        statusView.text = message
+        statusView.setTextColor(ContextCompat.getColor(this, R.color.status_warning))
+    }
+
+    private fun showError(message: String) {
+        statusView.text = message
+        statusView.setTextColor(ContextCompat.getColor(this, R.color.status_error))
     }
 
     companion object {

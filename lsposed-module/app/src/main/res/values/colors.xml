@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="ic_launcher_background">#101418</color>
+    <color name="status_success">#2E7D32</color>
+    <color name="status_warning">#B26A00</color>
+    <color name="status_error">#C62828</color>
 </resources>
