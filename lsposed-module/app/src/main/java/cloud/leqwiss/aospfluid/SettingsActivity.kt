@@ -3,6 +3,7 @@ package cloud.leqwiss.aospfluid
 import android.content.SharedPreferences
 import android.os.Bundle
 import android.widget.RadioGroup
+import android.widget.RadioButton
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.button.MaterialButton
@@ -12,9 +13,9 @@ import com.google.android.material.slider.Slider
 class SettingsActivity : AppCompatActivity() {
     private lateinit var statusView: TextView
     private lateinit var profileGroup: RadioGroup
-    private lateinit var profileHyper: com.google.android.material.radioButton.MaterialRadioButton
-    private lateinit var profileColor: com.google.android.material.radioButton.MaterialRadioButton
-    private lateinit var profileOrigin: com.google.android.material.radioButton.MaterialRadioButton
+    private lateinit var profileHyper: RadioButton
+    private lateinit var profileColor: RadioButton
+    private lateinit var profileOrigin: RadioButton
     private lateinit var speedSlider: Slider
     private lateinit var speedValue: TextView
     private lateinit var blurSwitch: MaterialSwitch

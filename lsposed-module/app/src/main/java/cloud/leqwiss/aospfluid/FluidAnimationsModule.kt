@@ -181,7 +181,6 @@ class FluidAnimationsModule : XposedModule() {
         if (!leash.isValid) return
         transaction.setScale(leash, 0.10f, 0.10f)
         transaction.setAlpha(leash, 0f)
-        transaction.setCornerRadius(leash, 0f)
         transaction.apply()
     }
 

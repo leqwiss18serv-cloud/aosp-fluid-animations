@@ -18,7 +18,7 @@ class FluidAnimation(
         duration = ((if (enter) profile.openDuration else profile.closeDuration) / speed)
             .roundToLong()
             .coerceAtLeast(90L)
-        this.interpolator?.let { setInterpolator(it) }
+        setInterpolator(interpolator)
     }
 
     override fun initialize(

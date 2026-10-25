@@ -1,6 +1,7 @@
 package cloud.leqwiss.aospfluid
 
 import android.animation.TimeInterpolator
+import android.view.animation.Interpolator
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.exp
@@ -12,7 +13,7 @@ class CubicBezierInterpolator(
     private val y1: Float,
     private val x2: Float,
     private val y2: Float
-) : TimeInterpolator {
+) : TimeInterpolator, Interpolator {
     override fun getInterpolation(input: Float): Float {
         if (input <= 0f) return 0f
         if (input >= 1f) return 1f
@@ -52,7 +53,7 @@ class SpringInterpolator(
     stiffness: Float,
     private val dampingRatio: Float,
     private val duration: Long
-) : TimeInterpolator {
+) : TimeInterpolator, Interpolator {
     private val naturalFrequency = sqrt(stiffness)
 
     override fun getInterpolation(input: Float): Float {
@@ -86,7 +87,7 @@ class SpringInterpolator(
     private fun sinh(value: Float): Float = ((exp(value) - exp(-value)) / 2f).toFloat()
 }
 
-internal fun createInterpolator(profile: AnimationProfile, enter: Boolean): TimeInterpolator {
+internal fun createInterpolator(profile: AnimationProfile, enter: Boolean): Interpolator {
     return when (profile) {
         AnimationProfile.HYPEROS -> CubicBezierInterpolator(0.20f, 0.00f, 0.00f, 1.00f)
         AnimationProfile.COLOROS -> SpringInterpolator(
