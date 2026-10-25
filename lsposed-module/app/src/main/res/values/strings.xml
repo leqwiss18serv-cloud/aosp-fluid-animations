@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AOSP Fluid Animations</string>
+    <string name="module_description">HyperOS 4, ColorOS и OriginOS 7 физика системных анимаций для Android 16.</string>
+    <string name="settings_title">Физика анимаций</string>
+    <string name="status_ready">Настройки применяются в system_server автоматически.</string>
+    <string name="status_service_missing">LSPosed Service не подключён. Установите APK, включите модуль и перезапустите Android.</string>
+    <string name="status_read_failed">Не удалось прочитать настройки.</string>
+    <string name="status_saved">Сохранено</string>
+    <string name="profile_title">Профиль анимаций</string>
+    <string name="profile_hyperos">HyperOS 4 — Dynamic Engine</string>
+    <string name="profile_coloros">ColorOS — Fluid Cloud</string>
+    <string name="profile_originos">OriginOS 7 — Quantum Physics</string>
+    <string name="speed_title">Общая скорость</string>
+    <string name="speed_value">Скорость: %1$.2fx</string>
+    <string name="coloros_blur">Glass-фон ColorOS</string>
+    <string name="blur_radius">Радиус размытия: %1$d</string>
+    <string name="blur_hint">Только ColorOS, только статические кадры. При ошибке отключается автоматически.</string>
+    <string name="cancel_fix">Фикс прыжка при отмене</string>
+    <string name="cancel_hint">Прерывание мгновенно сжимает окно к 0.1 и убирает фокус.</string>
+    <string name="zero_latency">Моментальный первый кадр</string>
+    <string name="zero_latency_hint">Реальный UI стартует раньше, без ожидания Splash Screen.</string>
+    <string name="reset_settings">Сбросить к OriginOS 7</string>
+    <string name="originos_note">Рекомендованный профиль: OriginOS 7 — максимальная похожесть на оригинал.</string>
+</resources>
